@@ -18,6 +18,9 @@ public class MainApplication {
     }
 
     private static String processText(String text){
+        for(int i=1; i<=10; i++){
+            text = text + " " + i + " ";
+        }
         return text + " and you must believe it! ";
     }
 
