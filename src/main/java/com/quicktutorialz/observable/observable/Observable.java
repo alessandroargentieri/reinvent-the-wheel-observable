@@ -2,6 +2,8 @@ package com.quicktutorialz.observable.observable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -10,6 +12,7 @@ public class Observable {
 
     private Supplier supplier;
     private List<Function> mapList = new ArrayList<>();
+    ExecutorService exec = Executors.newFixedThreadPool(10);
 
     public Observable just(Supplier supplier){
         this.supplier = supplier;
@@ -17,15 +20,21 @@ public class Observable {
     }
 
     public void subscribe(Consumer onFinish){
+        exec.submit(() -> onFinish.accept(getResult()));
+    }
+
+    private void subscribe_syncr(Consumer onFinish){
         onFinish.accept(getResult());
     }
 
     public void subscribe(Consumer onFinish, Consumer onError){
-        try{
-            onFinish.accept(getResult());
-        }catch(Exception e){
-            onError.accept(e);
-        }
+        exec.submit(() -> {
+            try{
+                onFinish.accept(getResult());
+            }catch(Exception e){
+                onError.accept(e);
+            }
+        });
     }
 
     public Observable map(Function function){
@@ -40,7 +49,7 @@ public class Observable {
             result = f.apply(result);
             if(result instanceof Observable){
                 PartialResult partial = new PartialResult();
-                ((Observable) result).subscribe(res -> partial.setResult(res));
+                ((Observable) result).subscribe_syncr(res -> partial.setResult(res));
                 result = partial.getResult();
             }
         }
