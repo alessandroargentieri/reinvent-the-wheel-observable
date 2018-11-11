@@ -3,7 +3,6 @@ package com.quicktutorialz.observable.observable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -12,7 +11,7 @@ public class Observable {
 
     private Supplier supplier;
     private List<Function> mapList = new ArrayList<>();
-    ExecutorService exec = Executors.newFixedThreadPool(10);
+    ExecutorService exec = Executor.getExecutor(); //Executors.newFixedThreadPool(10);
 
     /* lazy elaboration */
 
@@ -43,38 +42,21 @@ public class Observable {
     /* -- lazy and async subscription -- */
 
     public void subscribeAsync(Consumer onFinish){
-        exec.submit(() -> onFinish.accept(getResult()));
+        exec.submit(() -> subscribe(onFinish));
     }
 
     public void subscribeAsync(Consumer onFinish, Consumer onError){
-        exec.submit(() -> {
-            try{
-                onFinish.accept(getResult());
-            }catch(Exception e){
-                onError.accept(e);
-            }
-        });
+        exec.submit(() -> subscribe(onFinish, onError));
     }
 
     public void subscribeAsync(Consumer onFinish, ExecutorService exec){
-        exec.submit(() -> onFinish.accept(getResult()));
+        exec.submit(() -> subscribe(onFinish));
     }
 
     public void subscribeAsync(Consumer onFinish, Consumer onError, ExecutorService exec){
-        exec.submit(() -> {
-            try{
-                onFinish.accept(getResult());
-            }catch(Exception e){
-                onError.accept(e);
-            }
-        });
+        exec.submit(() -> subscribe(onFinish, onError));
     }
 
-    /* -- private methods -- */
-
-    private void subscribe_syncr(Consumer onFinish){
-        onFinish.accept(getResult());
-    }
 
     private Object getResult(){
         Object result = supplier.get();
@@ -82,23 +64,11 @@ public class Observable {
             result = f.apply(result);
             if(result instanceof Observable){
                 PartialResult partial = new PartialResult();
-                ((Observable) result).subscribe_syncr(res -> partial.setResult(res));
-                result = partial.getResult();
+                ((Observable) result).subscribe(res -> partial.setResult(res));
+                result = partial.get();
             }
         }
         return result;
-    }
-
-    class PartialResult {
-        Object result;
-
-        protected Object getResult() {
-            return result;
-        }
-
-        protected void setResult(Object result) {
-            this.result = result;
-        }
     }
 
 }
