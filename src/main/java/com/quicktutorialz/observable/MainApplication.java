@@ -13,7 +13,7 @@ public class MainApplication {
                         .map(t -> processText((String) t))
                         .map(t -> processTextObs((String) t))
                         .map(t -> processText((String) t))
-                        .subscribe(result -> System.out.println(result));
+                        .subscribeAsync(result -> System.out.println(result));
 
     }
 

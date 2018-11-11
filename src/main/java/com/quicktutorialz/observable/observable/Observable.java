@@ -14,20 +14,39 @@ public class Observable {
     private List<Function> mapList = new ArrayList<>();
     ExecutorService exec = Executors.newFixedThreadPool(10);
 
+    /* lazy elaboration */
+
     public Observable just(Supplier supplier){
         this.supplier = supplier;
         return this;
     }
 
-    public void subscribe(Consumer onFinish){
-        exec.submit(() -> onFinish.accept(getResult()));
+    public Observable map(Function function){
+        mapList.add(function);
+        return this;
     }
 
-    private void subscribe_syncr(Consumer onFinish){
+    /* -- lazy subscription -- */
+
+    public void subscribe(Consumer onFinish){
         onFinish.accept(getResult());
     }
 
     public void subscribe(Consumer onFinish, Consumer onError){
+        try{
+            onFinish.accept(getResult());
+        }catch(Exception e){
+            onError.accept(e);
+        }
+    }
+
+    /* -- lazy and async subscription -- */
+
+    public void subscribeAsync(Consumer onFinish){
+        exec.submit(() -> onFinish.accept(getResult()));
+    }
+
+    public void subscribeAsync(Consumer onFinish, Consumer onError){
         exec.submit(() -> {
             try{
                 onFinish.accept(getResult());
@@ -37,11 +56,25 @@ public class Observable {
         });
     }
 
-    public Observable map(Function function){
-        mapList.add(function);
-        return this;
+    public void subscribeAsync(Consumer onFinish, ExecutorService exec){
+        exec.submit(() -> onFinish.accept(getResult()));
     }
 
+    public void subscribeAsync(Consumer onFinish, Consumer onError, ExecutorService exec){
+        exec.submit(() -> {
+            try{
+                onFinish.accept(getResult());
+            }catch(Exception e){
+                onError.accept(e);
+            }
+        });
+    }
+
+    /* -- private methods -- */
+
+    private void subscribe_syncr(Consumer onFinish){
+        onFinish.accept(getResult());
+    }
 
     private Object getResult(){
         Object result = supplier.get();
@@ -59,11 +92,11 @@ public class Observable {
     class PartialResult {
         Object result;
 
-        public Object getResult() {
+        protected Object getResult() {
             return result;
         }
 
-        public void setResult(Object result) {
+        protected void setResult(Object result) {
             this.result = result;
         }
     }
